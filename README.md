@@ -416,8 +416,8 @@ curl -X POST http://localhost:3000/users \
 ### Логи Core сервиса
 
 ```
-[Core] 📩 Bitrix Response Received: { status: 'success', action: 'create_card', user: {...} }
-[Core] ✅ Connected to RabbitMQ successfully
+[Core] Bitrix Response Received: { status: 'success', action: 'create_card', user: {...} }
+[Core] Connected to RabbitMQ successfully
 [Core] About to emit message to BITRIX_SERVICE: {...}
 [Core] Message emitted successfully
 ```
@@ -425,12 +425,12 @@ curl -X POST http://localhost:3000/users \
 ### Логи Bitrix сервиса
 
 ```
-[Bitrix] 🎉 Received user_created event: {...}
-[Bitrix] ✅ Job added to queue with ID: 123
-[Bitrix] 🔄 Processing bitrix_job: {...}
-[Bitrix] 📞 Calling Bitrix24 API with action: create_card
-[Bitrix] ✅ Created lead in Bitrix24: { result: 456, time: {...} }
-[Bitrix] ✅ Job completed successfully
+[Bitrix] Received user_created event: {...}
+[Bitrix] Job added to queue with ID: 123
+[Bitrix] Processing bitrix_job: {...}
+[Bitrix] Calling Bitrix24 API with action: create_card
+[Bitrix] Created lead in Bitrix24: { result: 456, time: {...} }
+[Bitrix] Job completed successfully
 ```
 
 ## Retry Logic в BullMQ
@@ -485,12 +485,12 @@ Reply sent to queue: bitrix.responses
 
 ```typescript
 this.queue.on('failed', (job, err) => {
-	console.log(`🔥 Job ${job.id} failed: ${err.message}`)
+	console.log(`Job ${job.id} failed: ${err.message}`)
 })
 
 this.queue.on('completed', (job, result) => {
 	console.log(
-		`✅ Job ${job.id} completed after ${job.attemptsMade + 1} attempt(s)`
+		`Job ${job.id} completed after ${job.attemptsMade + 1} attempt(s)`
 	)
 })
 
