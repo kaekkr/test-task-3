@@ -9,7 +9,7 @@ export class UserService {
   constructor(
     @InjectRepository(User)
     private userRepo: Repository<User>,
-    @Inject('BITRIX_SERVICE')
+    @Inject('BITRIX_CLIENT')
     private client: ClientProxy,
   ) {
     this.client

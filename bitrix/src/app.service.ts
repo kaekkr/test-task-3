@@ -6,7 +6,7 @@ import { Queue } from 'bull';
 @Injectable()
 export class AppService implements OnModuleInit {
   constructor(
-    @Inject('BITRIX_RMQ_SERVICE') private client: ClientProxy,
+    @Inject('REPLY_CLIENT') private client: ClientProxy,
     @InjectQueue('bitrix_jobs') private queue: Queue,
   ) {}
 
