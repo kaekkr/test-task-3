@@ -46,6 +46,15 @@ export class UserService {
     await this.userRepo.update(id, data);
     const updated = await this.userRepo.findOneBy({ id });
 
+    if (!updated) {
+      throw new Error(`User with id ${id} not found`);
+    }
+
+    if (!updated.bitrix_lead_id) {
+      console.warn(`User ${id} has no bitrix_lead_id, skipping Bitrix update`);
+      return updated;
+    }
+
     this.client.emit('user_updated', {
       action: 'update_card',
       user: updated,
@@ -59,6 +68,15 @@ export class UserService {
     await this.userRepo.update(id, { stage: newStage });
     const user = await this.userRepo.findOneBy({ id });
 
+    if (!user) {
+      throw new Error(`User with id ${id} not found`);
+    }
+
+    if (!user.bitrix_lead_id) {
+      console.warn(`User ${id} has no bitrix_lead_id, skipping Bitrix move`);
+      return user;
+    }
+
     this.client.emit('user_moved', {
       action: 'move_card',
       user,
@@ -66,5 +84,10 @@ export class UserService {
     });
 
     return user;
+  }
+
+  async updateBitrixLeadId(userId: number, bitrixLeadId: number) {
+    await this.userRepo.update(userId, { bitrix_lead_id: bitrixLeadId });
+    console.log(`Updated user ${userId} with bitrix_lead_id: ${bitrixLeadId}`);
   }
 }

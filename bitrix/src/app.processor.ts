@@ -11,7 +11,6 @@ export class AppProcessor {
   async handleJob(job: Job) {
     const attemptNumber = job.attemptsMade + 1;
     const maxAttempts = job.opts?.attempts || 3;
-
     console.log(
       `Processing bitrix_job (attempt ${attemptNumber}/${maxAttempts}): `,
       job.data,
@@ -21,14 +20,12 @@ export class AppProcessor {
 
     if (!user.phone) {
       console.error('Missing phone number for user: ', user);
-
       await this.appService.sendReply(replyQueue, {
         status: 'error',
         reason: 'Missing phone number',
         user,
         attempts: attemptNumber,
       });
-
       throw new Error('Missing phone number - no retry needed');
     }
 
@@ -39,48 +36,67 @@ export class AppProcessor {
       );
 
       let response;
-      const leadId = user.bitrix_lead_id || user.id;
 
       if (action === 'create_card') {
+        const createFields = {
+          NAME: user.full_name,
+          PHONE: [{ VALUE: user.phone, VALUE_TYPE: 'WORK' }],
+          STATUS_ID: user.stage,
+        };
+
+        console.log('Creating lead with fields:', createFields);
+
         response = await axios.post(`${webhook}/crm.lead.add`, {
-          fields: {
-            NAME: user.full_name,
-            PHONE: [{ VALUE: user.phone, VALUE_TYPE: 'WORK' }],
-            STATUS_ID: user.stage,
-          },
+          fields: createFields,
         });
+
         console.log('Created lead in Bitrix24: ', response.data);
-      }
 
-      if (action === 'update_card') {
-        response = await axios.post(`${webhook}/crm.lead.update`, {
-          id: leadId,
-          fields: {
-            NAME: user.full_name,
-            PHONE: [{ VALUE: user.phone, VALUE_TYPE: 'WORK' }],
-            STATUS_ID: user.stage,
-          },
+        await this.appService.sendReply(replyQueue, {
+          status: 'success',
+          action,
+          user_id: user.id,
+          bitrix_lead_id: response.data.result,
+          attempts: attemptNumber,
         });
-        console.log('Updated lead in Bitrix24: ', response.data);
       }
 
-      if (action === 'move_card') {
+      if (action === 'update_card' || action === 'move_card') {
+        if (!user.bitrix_lead_id) {
+          throw new Error(
+            `Cannot ${action}: user ${user.id} has no bitrix_lead_id`,
+          );
+        }
+
+        const updateFields =
+          action === 'move_card'
+            ? { STATUS_ID: user.stage }
+            : {
+                NAME: user.full_name,
+                PHONE: [{ VALUE: user.phone, VALUE_TYPE: 'WORK' }],
+                STATUS_ID: user.stage,
+              };
+
+        console.log(
+          `Updating lead ${user.bitrix_lead_id} with fields:`,
+          updateFields,
+        );
+
         response = await axios.post(`${webhook}/crm.lead.update`, {
-          id: leadId,
-          fields: {
-            STATUS_ID: user.stage,
-          },
+          id: user.bitrix_lead_id,
+          fields: updateFields,
         });
-        console.log('Moved lead in Bitrix24: ', response.data);
-      }
 
-      await this.appService.sendReply(replyQueue, {
-        status: 'success',
-        action,
-        user,
-        bitrix_response: response?.data,
-        attempts: attemptNumber,
-      });
+        console.log(`${action} lead in Bitrix24: `, response.data);
+
+        await this.appService.sendReply(replyQueue, {
+          status: 'success',
+          action,
+          user_id: user.id,
+          bitrix_lead_id: user.bitrix_lead_id,
+          attempts: attemptNumber,
+        });
+      }
 
       console.log(
         `Job completed successfully after ${attemptNumber} attempt(s)`,
@@ -93,13 +109,19 @@ export class AppProcessor {
         errorMessage,
       );
 
+      if (err.response?.data) {
+        console.error(
+          'Bitrix API error details:',
+          JSON.stringify(err.response.data, null, 2),
+        );
+      }
+
       if (attemptNumber >= maxAttempts) {
         console.error('All retry attempts exhausted, sending error reply');
-
         await this.appService.sendReply(replyQueue, {
           status: 'error',
           error: errorMessage,
-          user,
+          user_id: user.id,
           attempts: attemptNumber,
           final_attempt: true,
         });

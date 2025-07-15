@@ -1,4 +1,4 @@
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()
 export class User {
@@ -8,9 +8,12 @@ export class User {
   @Column()
   full_name: string;
 
-  @Column() 
+  @Column()
   phone: string;
 
   @Column()
   stage: string;
+
+  @Column({ nullable: true })
+  bitrix_lead_id: number;
 }
